@@ -1,0 +1,79 @@
+﻿version: '3.8'
+
+services:
+  # Flask Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: image-import-backend
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      
+      # Database Configuration - Azure SQL Enabled
+      - DB_SERVER=image-import-sql-server.database.windows.net
+      - DB_NAME=image_metadata_db
+      - DB_USER=sqladmin
+      - DB_PASSWORD=Yash@sql
+      - DB_DRIVER=ODBC Driver 18 for SQL Server
+      
+      # Cloud Storage Configuration
+      - STORAGE_PROVIDER=azure
+      
+      # AWS S3 Configuration
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_BUCKET_NAME=${AWS_BUCKET_NAME:-}
+      
+      # Azure Blob Storage Configuration
+      - AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=imagestorage2;AccountKey=skDEfA5x7zN+q9l85Kvb4x00TcreNGwbd6rLHHyTrb2ZdUBE9xL5FIUgqYbdnPC9oIgKjjiIoXLq+AStHXrpAA==;EndpointSuffix=core.windows.net
+      - AZURE_STORAGE_CONTAINER_NAME=images
+      
+      # Google Drive API Configuration
+      - GOOGLE_API_KEY=AIzaSyDqBiHSCru_c1RrgIxP5rTSznv8JKespqU
+    volumes:
+      - backend-data:/app/instance
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/stats"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # React Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: image-import-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:5000/api
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  backend-data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
