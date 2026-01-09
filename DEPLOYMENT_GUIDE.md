@@ -44,7 +44,7 @@ docker ps
 
 ```bash
 cd ~
-git clone https://github.com/metaltroop/image-import-system.git
+git clone https://github.com/SalunkeYash/image-import-system.git
 cd image-import-system
 ```
 
